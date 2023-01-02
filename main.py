@@ -1,6 +1,7 @@
 from enum import Enum
 
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 app = FastAPI()
 
@@ -9,6 +10,9 @@ class Spice(str, Enum):
     pepper = "pepper"
     salt = "salt"
     maggi = "maggi"
+
+
+### PATH AND QUERY PARAMETERS
 
 
 @app.get('/')
@@ -57,3 +61,26 @@ async def get_query_parameter(mandatory: str, flag: bool = False, extra: str | N
         'flag': flag,
         'extra': extra,
     }
+
+
+### REQUEST BODY
+
+
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+
+
+@app.post('/items/')
+async def create_item(item: Item):
+    item.name = f"{item.name} + happy!"
+    properties = item.dict()
+    properties.update({'brutto': item.price + item.tax})
+    return properties
+
+
+@app.put('/items/{item_id}')
+async def update_item(item_id: int, item: Item):
+    return {'item_id': item_id, **item.dict()}
