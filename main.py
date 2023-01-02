@@ -1,6 +1,6 @@
 from enum import Enum
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -84,3 +84,31 @@ async def create_item(item: Item):
 @app.put('/items/{item_id}')
 async def update_item(item_id: int, item: Item):
     return {'item_id': item_id, **item.dict()}
+
+
+### QUERY PARAMETERS AND STRING VALIDATIONS
+
+
+@app.get('/items/')
+async def items(q: str | None = Query(
+    default=None,
+    alias="item-query",  # so we can use dash in url param
+    title="Query String",
+    description="Query string for the items",
+    min_length=3,
+    max_length=50,
+    regex="^fixedquery$",
+    deprecated=True,
+    include_in_schema=False  # set False to hide parameter from /docs
+)):
+    results = {"fuu": "bar"}
+    if q:
+        results['q'] = q
+    return results
+
+
+@app.get('/items-multi-q/')
+async def handle_multi_queries(q: list = Query(default=['zupa'])):
+    """ /items-multi-q/?q=3&q=90 -> [3, 90] """
+    query_items = {'q': q}
+    return query_items
