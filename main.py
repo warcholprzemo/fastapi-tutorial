@@ -1,6 +1,6 @@
 from enum import Enum
 
-from fastapi import FastAPI, Query
+from fastapi import Body, FastAPI, Path, Query
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -73,6 +73,11 @@ class Item(BaseModel):
     tax: float | None = None
 
 
+class User(BaseModel):
+    username: str
+    full_name: str | None = None
+
+
 @app.post('/items/')
 async def create_item(item: Item):
     item.name = f"{item.name} + happy!"
@@ -82,8 +87,19 @@ async def create_item(item: Item):
 
 
 @app.put('/items/{item_id}')
-async def update_item(item_id: int, item: Item):
-    return {'item_id': item_id, **item.dict()}
+async def update_item(item_id: int, item: Item, user: User, counter: int = Body()):
+    # Multi arguments for payload, we need to pass
+    # "item": {...}
+    # "user": {...}
+    # "counter: 6 - please notice Body(), so it is not a query parameter
+    return {'item_id': item_id, "item": item, "user": user, "counter": counter}
+
+
+@app.put('/items/single-model/{item_id}')
+async def update_single_model(item_id: int, item: Item = Body(embed=True)):
+    # Here we pass only 1 argument for payload but we want to force "main" key
+    # Then with embed=True we need to set "main" key -> item here
+    return {'item_id': item_id, "item": item}
 
 
 ### QUERY PARAMETERS AND STRING VALIDATIONS
@@ -112,3 +128,19 @@ async def handle_multi_queries(q: list = Query(default=['zupa'])):
     """ /items-multi-q/?q=3&q=90 -> [3, 90] """
     query_items = {'q': q}
     return query_items
+
+
+### PATH PARAMETERS AND NUMERIC VALIDATIONS
+
+
+@app.get('/new-path/{item_id}')
+async def new_path(
+    q: str,  # it is mandatory query parameter, order is not important, we can use also Query here
+    item_id: int = Path(title="The ID of the item to get", ge=1, lt=1000)
+):
+    # ge - greater or equal than
+    # gt - greater than
+    # le, lt - similar with less
+
+    results = {"item_id": item_id, "q": q}
+    return results
