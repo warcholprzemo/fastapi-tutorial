@@ -1,7 +1,7 @@
 from enum import Enum
 
 from fastapi import Body, FastAPI, Path, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, HttpUrl
 
 app = FastAPI()
 
@@ -63,14 +63,25 @@ async def get_query_parameter(mandatory: str, flag: bool = False, extra: str | N
     }
 
 
-### REQUEST BODY
+### REQUEST BODY + NESTED MODELS
+
+
+class Image(BaseModel):
+    url: HttpUrl
+    name: str
 
 
 class Item(BaseModel):
     name: str
-    description: str | None = None
-    price: float
+    description: str | None = Field(
+        default=None,
+        title="The description of item",
+        max_length=30
+    )
+    price: float = Field(gt=0, description="The price must be greater than 0")
     tax: float | None = None
+    tags: set[str] = set()
+    image: Image | None = None
 
 
 class User(BaseModel):
@@ -99,7 +110,15 @@ async def update_item(item_id: int, item: Item, user: User, counter: int = Body(
 async def update_single_model(item_id: int, item: Item = Body(embed=True)):
     # Here we pass only 1 argument for payload but we want to force "main" key
     # Then with embed=True we need to set "main" key -> item here
-    return {'item_id': item_id, "item": item}
+    item_data = item.dict()
+    item_data['brutto'] = item.price + item.tax
+    return {'item_id': item_id, "item": item_data}
+
+
+@app.post('/items/create-images')
+async def create_images(images: list[Image]):
+    # Body(embed=True) alsow works here
+    return {"images": images}
 
 
 ### QUERY PARAMETERS AND STRING VALIDATIONS
