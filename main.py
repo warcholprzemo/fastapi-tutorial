@@ -78,10 +78,33 @@ class Item(BaseModel):
         title="The description of item",
         max_length=30
     )
-    price: float = Field(gt=0, description="The price must be greater than 0")
-    tax: float | None = None
+    price: float = Field(
+        gt=0,
+        description="The price must be greater than 0",
+        examples={
+            "good": 25.6,
+            "bad": "some string"
+        }
+    )
+    tax: float | None = Field(example="11.5")
     tags: set[str] = set()
     image: Image | None = None
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Foo",
+                "description": "Bar",
+                "price": 22.4,
+                "tax": 11.0,
+                "tags": ["oho", "boho"],
+                "image": {
+                    "url": "https://example.com",
+                    "name": "example"
+                }
+            }
+        }
+
 
 
 class User(BaseModel):
