@@ -1,6 +1,7 @@
 from enum import Enum
+from typing import Any
 
-from fastapi import Body, FastAPI, Path, Query
+from fastapi import Body, Cookie, FastAPI, Header, Path, Query
 from pydantic import BaseModel, Field, HttpUrl
 
 app = FastAPI()
@@ -22,8 +23,21 @@ async def root():
 
 # order is important, prz before {name}
 @app.get('/names/name/prz')
-async def read_prz():
-    return {"Name": "PRZ"}
+async def read_prz(
+    some_cookie: str | None = Cookie(default=None),
+    user_agent: str | None = Header(default=None),
+    x_token: list[str] | None = Header(default=None)  # we can send many X-Token
+):
+    # we can test cookie using curl
+    # curl -X GET "http://127.0.0.1:8000/names/name/prz" -H  "accept: application/json"
+    # -H  "Cookie: some_cookie=fbab"
+    # interesting fact - curl has own User-Agent
+    return {
+        "Name": "PRZ",
+        "some_cookie": some_cookie,
+        "user_agent": user_agent,
+        "x_token": x_token
+    }
 
 
 @app.get('/names/name/{name}')
@@ -106,10 +120,28 @@ class Item(BaseModel):
         }
 
 
-
-class User(BaseModel):
+class UserOutput(BaseModel):
     username: str
     full_name: str | None = None
+    age: int = 0
+
+
+class User(UserOutput):
+    password: str
+
+
+@app.post(
+    '/create-user/',
+    response_model=UserOutput,
+    #response_model_exclude_unset=True
+    response_model_exclude={'age'}
+)
+async def create_user(user: User) -> Any:
+    # response_model has priority over return type, but we can use it
+    # response_model_exclude_unset - removes values that were not set in request (it's smart!)
+    # similar: response_model_exclude_defaults, response_model_exclude_none
+    # response_model_exclude / response_model_include
+    return user
 
 
 @app.post('/items/')
