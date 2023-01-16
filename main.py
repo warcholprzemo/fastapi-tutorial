@@ -1,7 +1,8 @@
 from enum import Enum
+from hashlib import md5
 from typing import Any
 
-from fastapi import Body, Cookie, FastAPI, Header, Path, Query
+from fastapi import Body, Cookie, FastAPI, File, Form, Header, Path, Query, Response, UploadFile, status
 from pydantic import BaseModel, Field, HttpUrl
 
 app = FastAPI()
@@ -134,7 +135,8 @@ class User(UserOutput):
     '/create-user/',
     response_model=UserOutput,
     #response_model_exclude_unset=True
-    response_model_exclude={'age'}
+    response_model_exclude={'age'},
+    status_code=status.HTTP_201_CREATED
 )
 async def create_user(user: User) -> Any:
     # response_model has priority over return type, but we can use it
@@ -145,10 +147,13 @@ async def create_user(user: User) -> Any:
 
 
 @app.post('/items/')
-async def create_item(item: Item):
+async def create_item(item: Item, response: Response, create_new: bool | None = None):
+    # create_new - query parameter
     item.name = f"{item.name} + happy!"
     properties = item.dict()
     properties.update({'brutto': item.price + item.tax})
+    if create_new:
+        response.status_code = status.HTTP_201_CREATED
     return properties
 
 
@@ -218,3 +223,22 @@ async def new_path(
 
     results = {"item_id": item_id, "q": q}
     return results
+
+
+### FORM DATA
+
+
+@app.post('/from-html/')
+async def from_html(
+    username: str = Form(),
+    password: str = Form(),
+    text_file: UploadFile = File(alias="text-file")
+) -> dict:
+    text_data = await text_file.read()
+    text_content_type = text_file.content_type
+    return {
+        "username": username,
+        "password": md5(password.encode()).hexdigest(),
+        "text_data": text_data,
+        "text_content_type": text_content_type,
+    }
